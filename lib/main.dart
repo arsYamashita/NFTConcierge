@@ -1,115 +1,186 @@
-import 'package:flutter/material.dart';
+import 'dart:html';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_web3/flutter_web3.dart';
+import 'package:get/get.dart';
+import 'package:web3dart/web3dart.dart';
+late Client httpClient;
+late Web3Client ethClient;
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+  Widget build(BuildContext context) =>
+      GetMaterialApp(title: 'Flutter Web3 Example', home: Home());
+}
+
+class HomeController extends GetxController {
+  bool get isInOperatingChain => currentChain == OPERATING_CHAIN;
+
+  bool get isConnected => Ethereum.isSupported && currentAddress.isNotEmpty;
+
+  String currentAddress = '';
+
+  int currentChain = -1;
+
+  bool wcConnected = false;
+
+  static const OPERATING_CHAIN = 80001;
+
+  final wc = WalletConnectProvider.binance();
+  double amount = 0;
+  Web3Provider? web3wc;
+
+  connectProvider() async {
+    if (Ethereum.isSupported) {
+      final accs = await ethereum!.requestAccount();
+      if (accs.isNotEmpty) {
+        currentAddress = accs.first;
+        currentChain = await ethereum!.getChainId();
+      }
+
+      update();
+    }
   }
-}
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  connectWC() async {
+    await wc.connect();
+    if (wc.connected) {
+      currentAddress = wc.accounts.first;
+      print(currentAddress);
+      currentChain = OPERATING_CHAIN;
+      wcConnected = true;
+      web3wc = Web3Provider.fromWalletConnect(wc);
+      final Future<BigInt>? balance = web3wc?.getBalance(currentAddress);
+      print(balance);
+      balance?.then((value){
+        amount = value.toDouble() * 1 / 1000000000000000000; // WEI to ETH;
+        print(amount);
+      });
+    }
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+    update();
+  }
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  clear() {
+    currentAddress = '';
+    currentChain = -1;
+    wcConnected = false;
+    web3wc = null;
 
-  final String title;
+    update();
+  }
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+  init() {
+    if (Ethereum.isSupported) {
+      connectProvider();
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+      ethereum!.onAccountsChanged((accs) {
+        clear();
+      });
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      ethereum!.onChainChanged((chain) {
+        clear();
+      });
+    }
+  }
+
+  getLastestBlock() async {
+    print(await provider!.getLastestBlock());
+    print(await provider!.getLastestBlockWithTransaction());
+  }
+
+  testProvider() async {
+    final rpcProvider = JsonRpcProvider('https://bsc-dataseed.binance.org/');
+    print(rpcProvider);
+    print(await rpcProvider.getNetwork());
+  }
+
+  test() async {}
+
+  testSwitchChain() async {
+    await ethereum!.walletSwitchChain(97, () async {
+      await ethereum!.walletAddChain(
+        chainId: 97,
+        chainName: 'Binance Testnet',
+        nativeCurrency:
+        CurrencyParams(name: 'BNB', symbol: 'BNB', decimals: 18),
+        rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545/'],
+      );
     });
   }
 
   @override
+  void onInit() {
+    init();
+
+    super.onInit();
+  }
+}
+
+class Home extends StatelessWidget {
+  @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+    return GetBuilder<HomeController>(
+      init: HomeController(),
+      builder: (h) => Scaffold(
+        body: Center(
+          child: Column(children: [
+            Container(height: 10),
+            Builder(builder: (_) {
+              var shown = '';
+              if (h.isConnected && h.isInOperatingChain)
+                shown = 'You\'re connected!';
+              else if (h.isConnected && !h.isInOperatingChain)
+                shown = 'Wrong chain! Please connect to BSC. (56)';
+              else if (Ethereum.isSupported)
+                return OutlinedButton(
+                    child: Text('Connect'), onPressed: h.connectProvider);
+              else
+                shown = 'Your browser is not supported!';
+
+              return Text(shown,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20));
+            }),
+            Container(height: 30),
+            if (h.isConnected && h.isInOperatingChain) ...[
+              TextButton(
+                  onPressed: h.getLastestBlock,
+                  child: Text('get lastest block')),
+              Container(height: 10),
+              TextButton(
+                  onPressed: h.testProvider,
+                  child: Text('test binance rpc provider')),
+              Container(height: 10),
+              TextButton(onPressed: h.test, child: Text('test')),
+              Container(height: 10),
+              TextButton(
+                  onPressed: h.testSwitchChain,
+                  child: Text('test switch chain')),
+            ],
+            Container(height: 30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Address: ${h.currentAddress}'),
+                h.currentAddress.length > 0 ? Text('${h.amount}') : Text('まだ'),
+                Text('Wallet Connect connected: ${h.wcConnected}'),
+                Container(width: 10),
+                OutlinedButton(
+                    child: Text('Connect to WC'), onPressed: h.connectWC)
+              ],
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+            Container(height: 30),
+            if (h.wcConnected && h.wc.connected) ...[
+              Text(h.wc.walletMeta.toString()),
+            ],
+          ]),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
+
+
