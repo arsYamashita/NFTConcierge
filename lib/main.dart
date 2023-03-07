@@ -27,7 +27,7 @@ class HomeController extends GetxController {
 
   bool wcConnected = false;
 
-  static const OPERATING_CHAIN = 80001;
+  static const OPERATING_CHAIN = 137;
 
   final wc = WalletConnectProvider.binance();
   double amount = 0;
