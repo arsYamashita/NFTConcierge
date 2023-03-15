@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:html';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_web3/flutter_web3.dart';
 import 'package:get/get.dart';
+import 'package:nft_concierge/connected.dart';
 import 'package:web3dart/web3dart.dart';
+import 'package:http/http.dart' as http;
+
 late Client httpClient;
 late Web3Client ethClient;
 void main() {
@@ -29,7 +33,7 @@ class HomeController extends GetxController {
 
   static const OPERATING_CHAIN = 137;
 
-  final wc = WalletConnectProvider.binance();
+  final wc = WalletConnectProvider.polygon();
   double amount = 0;
   Web3Provider? web3wc;
 
@@ -40,25 +44,17 @@ class HomeController extends GetxController {
         currentAddress = accs.first;
         currentChain = await ethereum!.getChainId();
       }
-
       update();
     }
   }
 
-  connectWC() async {
+  connectWC(BuildContext context) async {
     await wc.connect();
     if (wc.connected) {
       currentAddress = wc.accounts.first;
-      print(currentAddress);
       currentChain = OPERATING_CHAIN;
       wcConnected = true;
       web3wc = Web3Provider.fromWalletConnect(wc);
-      final Future<BigInt>? balance = web3wc?.getBalance(currentAddress);
-      print(balance);
-      balance?.then((value){
-        amount = value.toDouble() * 1 / 1000000000000000000; // WEI to ETH;
-        print(amount);
-      });
     }
 
     update();
@@ -111,6 +107,7 @@ class HomeController extends GetxController {
       );
     });
   }
+
 
   @override
   void onInit() {
@@ -168,8 +165,22 @@ class Home extends StatelessWidget {
                 h.currentAddress.length > 0 ? Text('${h.amount}') : Text('まだ'),
                 Text('Wallet Connect connected: ${h.wcConnected}'),
                 Container(width: 10),
+                h.currentAddress.length == 0 ?
                 OutlinedButton(
-                    child: Text('Connect to WC'), onPressed: h.connectWC)
+                    child: Text('Connect to WC'), onPressed: h.connectWC(context)) :
+                OutlinedButton(
+                    child: Text('NFT一覧へ'), onPressed: (){
+                  Navigator.push(context, MaterialPageRoute(
+                    // （2） 実際に表示するページ(ウィジェット)を指定する
+                      builder: (context) =>NftList(
+                        contractAddress: '0xFe82688c1191cd23aEE864C5B3579df38B70742A',
+                        address: h.currentAddress,
+                        page: 0,
+                        limit: 20,
+                      )
+                  ));
+                })
+
               ],
             ),
             Container(height: 30),
@@ -182,5 +193,6 @@ class Home extends StatelessWidget {
     );
   }
 }
+
 
 

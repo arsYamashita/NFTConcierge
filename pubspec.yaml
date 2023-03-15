@@ -39,6 +39,7 @@ dependencies:
   http: ^0.13.5
   flutter_web3: ^2.1.9
   get: ^4.6.5
+  flutter_web3_provider: ^1.0.6
 
 dev_dependencies:
   flutter_test:
