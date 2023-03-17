@@ -13,7 +13,12 @@ Future<List<dynamic>> getNFTs(String contractAddress, String address,
 
   if (response.statusCode == 200) {
     final jsonBody = json.decode(response.body);
-    print(jsonBody);
+
+    for (var nft in jsonBody['ownedNfts']){
+      print(nft['media'][0]['raw']);
+      print(nft['media'][0]['thumbnail']);
+      print(nft['metadata']['image']);
+    }
     return jsonBody['ownedNfts'];
   } else {
     throw Exception('Failed to load NFTs');
@@ -46,8 +51,8 @@ class NftList extends StatelessWidget {
                 return Card(
                   child: Column(
                     children: <Widget>[
-                      (nft['metadata']['image']).contains('ipfs://') ?
-                      Image.network(nft['metadata']['image'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')) : Image.network(nft['metadata']['image']),
+                      (nft['media'][0]['raw']).contains('ipfs://') ?
+                      Image.network(nft['media'][0]['raw'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')) : Image.network(nft['media'][0]['raw']),
                       Text(nft['title']),
                       Text(nft['description']),
                     ],
