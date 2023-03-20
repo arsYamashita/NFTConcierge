@@ -93,7 +93,7 @@ class NftList extends StatelessWidget {
                                     fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                nft.created,
+                                nft.description,
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ],
