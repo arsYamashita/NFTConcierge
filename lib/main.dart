@@ -131,7 +131,7 @@ class Home extends StatelessWidget {
               if (h.isConnected && h.isInOperatingChain)
                 shown = 'You\'re connected!';
               else if (h.isConnected && !h.isInOperatingChain)
-                shown = 'Wrong chain! Please connect to BSC. (56)';
+                shown = 'Wrong chain! Please connect to Porigon.';
               else if (Ethereum.isSupported)
                 return OutlinedButton(
                     child: Text('Connect'), onPressed: h.connectProvider);
@@ -158,7 +158,7 @@ class Home extends StatelessWidget {
                   child: Text('test switch chain')),
             ],
             Container(height: 30),
-            Row(
+            Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text('Address: ${h.currentAddress}'),
