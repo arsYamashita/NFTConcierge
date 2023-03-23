@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:html';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_web3/flutter_web3.dart';
 import 'package:get/get.dart';
@@ -17,7 +16,7 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
-      GetMaterialApp(title: 'Flutter Web3 Example', home: Home());
+      GetMaterialApp(title: '', home: Home());
 }
 
 class HomeController extends GetxController {
@@ -37,7 +36,7 @@ class HomeController extends GetxController {
   double amount = 0;
   Web3Provider? web3wc;
 
-  connectProvider() async {
+  void connectProvider() async {
     if (Ethereum.isSupported) {
       final accs = await ethereum!.requestAccount();
       if (accs.isNotEmpty) {
@@ -48,7 +47,7 @@ class HomeController extends GetxController {
     }
   }
 
-  connectWC(BuildContext context) async {
+  void connectWC(BuildContext context) async {
     await wc.connect();
     if (wc.connected) {
       currentAddress = wc.accounts.first;
@@ -70,6 +69,10 @@ class HomeController extends GetxController {
   }
 
   init() {
+    start();
+  }
+
+  void start() {
     if (Ethereum.isSupported) {
       connectProvider();
 
@@ -123,51 +126,33 @@ class Home extends StatelessWidget {
     return GetBuilder<HomeController>(
       init: HomeController(),
       builder: (h) => Scaffold(
+        appBar: AppBar(
+          title: Text('NFT Concierge'),
+          actions: [
+            h.wcConnected ? Icon(Icons.settings) :
+            Container(
+              child: TextButton( onPressed:() => h.connectWC(context), child: Text('ウォレット接続',
+                style: TextStyle(
+                  color: Colors.white,
+                ),)),
+            ),
+          ],
+        ),
         body: Center(
           child: Column(children: [
             Container(height: 10),
             Builder(builder: (_) {
               var shown = '';
-              if (h.isConnected && h.isInOperatingChain)
-                shown = 'You\'re connected!';
-              else if (h.isConnected && !h.isInOperatingChain)
+              if (h.isConnected && !h.isInOperatingChain)
                 shown = 'Wrong chain! Please connect to Porigon.';
-              else if (Ethereum.isSupported)
-                return OutlinedButton(
-                    child: Text('Connect'), onPressed: h.connectProvider);
-              else
-                shown = 'Your browser is not supported!';
-
               return Text(shown,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20));
             }),
-            Container(height: 30),
-            if (h.isConnected && h.isInOperatingChain) ...[
-              TextButton(
-                  onPressed: h.getLastestBlock,
-                  child: Text('get lastest block')),
-              Container(height: 10),
-              TextButton(
-                  onPressed: h.testProvider,
-                  child: Text('test binance rpc provider')),
-              Container(height: 10),
-              TextButton(onPressed: h.test, child: Text('test')),
-              Container(height: 10),
-              TextButton(
-                  onPressed: h.testSwitchChain,
-                  child: Text('test switch chain')),
-            ],
-            Container(height: 30),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Address: ${h.currentAddress}'),
-                h.currentAddress.length > 0 ? Text('${h.amount}') : Text('まだ'),
-                Text('Wallet Connect connected: ${h.wcConnected}'),
-                Container(width: 10),
                 h.currentAddress.length == 0 ?
-                OutlinedButton(
-                    child: Text('Connect to WC'), onPressed: h.connectWC(context)) :
+               Text('ウォレットに未接続です') :
                 OutlinedButton(
                     child: Text('NFT一覧へ'), onPressed: (){
                   Navigator.push(context, MaterialPageRoute(
@@ -185,7 +170,7 @@ class Home extends StatelessWidget {
             ),
             Container(height: 30),
             if (h.wcConnected && h.wc.connected) ...[
-              Text(h.wc.walletMeta.toString()),
+              Text('接続中:${h.currentAddress}'),
             ],
           ]),
         ),
