@@ -2,17 +2,33 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:html' as html;
+import "package:cloud_firestore/cloud_firestore.dart";
+
 const alchemyEndpoint = 'https://polygon-mainnet.g.alchemy.com/nft/v2/';
 const apiKey = 'b08QhiZ6NvO4GZBQQtxcqPXn-eJQXpqk';
-const endpoint = '$alchemyEndpoint$apiKey/getNFTs/';
+const endpointGetNFTs = '$alchemyEndpoint$apiKey/getNFTs/';
+const endpointGetNFTMetadata = '$alchemyEndpoint$apiKey/getNFTMetadata/';
+const endpointGetContractsForOwner = '$alchemyEndpoint$apiKey/getContractsForOwner/';
+const endpointGetContractMetadata = '$alchemyEndpoint$apiKey/getContractMetadata/';
 
 const nose360Address = '0x4539984a14cfc1854765dd81e4ef9aef6b7a5734';
 const boboAddress    = '0xa0e19ad5f2cacecb010f4459f4d7b75bfb23e136';
 
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+Future getContractMetadata(String contractAddress) async {
+  final response = await http.get(Uri.parse('$endpointGetContractMetadata?contractAddress=$contractAddress'));
+  if (response.statusCode == 200) {
+    final jsonBody = json.decode(response.body);
+    print(jsonBody);
+  } else {
+    throw Exception('Failed to load NFTs');
+  }
+}
 
 Future<List<NFT>> getNFTs(String contractAddress, String address,
     {int page = 0, int limit = 20}) async {
-  final response = await http.get(Uri.parse('$endpoint?owner=$address&excludeFilters=SPAM'));
+  final response = await http.get(Uri.parse('$endpointGetNFTs?owner=$address&excludeFilters=SPAM'));
 
   if (response.statusCode == 200) {
     final jsonBody = json.decode(response.body);
@@ -20,13 +36,24 @@ Future<List<NFT>> getNFTs(String contractAddress, String address,
     final List<NFT> nfts = [];
     for (var nft in jsonBody['ownedNfts']) {
       var item = NFT();
-      item.imageURL = (nft['media'][0]['raw']).contains('ipfs://') ? nft['media'][0]['raw'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')
-          : nft['media'][0]['raw'];
-      item.title = nft['title'];
-      item.description = nft['description'];
       item.created = nft['contractMetadata']['contractDeployer'];
+      var conAd = nft['contract']['address'];
+      var tokenID = nft['id']['tokenId'];
       if (containConciergeNFT(item)) {
-        nfts.add(item);
+        //final metaResponse = await http.get(Uri.parse('$endpointGetNFTMetadata?contractAddress=$conAd&tokenId=$tokenID'));
+        //final ownerResponse = await http.get(Uri.parse('$endpointGetContractsForOwner?owner=$address&pageSize=100&withMetadata=true'));
+        //if (ownerResponse.statusCode == 200) {
+          //final metaJsonBody = json.decode(ownerResponse.body);
+          //print(metaJsonBody);
+          item.imageURL = (nft['media'][0]['raw']).contains('ipfs://') ? nft['media'][0]['raw'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')
+              : nft['media'][0]['raw'];
+          item.title = nft['title'];
+          item.description = nft['description'];
+          nfts.add(item);
+
+          getContractMetadata(conAd);
+
+        //}
       }
     }
     return nfts;

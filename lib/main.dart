@@ -1,18 +1,34 @@
 import 'dart:convert';
 import 'dart:html';
+import 'package:firebase_core/firebase_core.dart';
+import "package:cloud_firestore/cloud_firestore.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter_web3/flutter_web3.dart';
 import 'package:get/get.dart';
 import 'package:nft_concierge/connected.dart';
+import 'package:nft_concierge/setUtilView.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
+import 'package:carousel_slider/carousel_slider.dart';
 
 late Client httpClient;
 late Web3Client ethClient;
-void main() {
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: FirebaseOptions(
+      apiKey: "AIzaSyBy83_zcGXZ00xDJ_vMnTF8iuyJ85tfv3g",
+      appId: "1:331191694934:web:e0d4663fcedb489db32df7",
+      messagingSenderId: "331191694934",
+      projectId: "nftconcierge-9f216",
+    ),
+  );
+  // FirebaseAnalyticsを使用した何らかの処理
+
   runApp(MyApp());
 }
-
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
@@ -29,6 +45,8 @@ class HomeController extends GetxController {
   int currentChain = -1;
 
   bool wcConnected = false;
+
+  List<String> contractAddressList = [];
 
   static const OPERATING_CHAIN = 137;
 
@@ -55,7 +73,6 @@ class HomeController extends GetxController {
       wcConnected = true;
       web3wc = Web3Provider.fromWalletConnect(wc);
     }
-
     update();
   }
 
@@ -84,6 +101,7 @@ class HomeController extends GetxController {
         clear();
       });
     }
+    getCcontractAddressList();
   }
 
   getLastestBlock() async {
@@ -115,8 +133,17 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     init();
-
+    Firebase.initializeApp(); // new
     super.onInit();
+  }
+
+  void getCcontractAddressList() async {
+    print('getCcontractAddressList');
+    final snapshot = await firestore
+        .collection('Collections')
+        .get();
+    var contractAddressList = snapshot.docs.map((doc) => doc.id).toList();
+    print(contractAddressList);
   }
 }
 
@@ -141,6 +168,7 @@ class Home extends StatelessWidget {
         body: Center(
           child: Column(children: [
             Container(height: 10),
+            imageSLider(context),
             Builder(builder: (_) {
               var shown = '';
               if (h.isConnected && !h.isInOperatingChain)
@@ -152,9 +180,9 @@ class Home extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 h.currentAddress.length == 0 ?
-               Text('ウォレットに未接続です') :
+                Text('ウォレットに未接続です') :
                 OutlinedButton(
-                    child: Text('NFT一覧へ'), onPressed: (){
+                    child: Text('ユーティリティNFT一覧へ'), onPressed: (){
                   Navigator.push(context, MaterialPageRoute(
                     // （2） 実際に表示するページ(ウィジェット)を指定する
                       builder: (context) =>NftList(
@@ -164,8 +192,14 @@ class Home extends StatelessWidget {
                         limit: 20,
                       )
                   ));
+                }),
+                OutlinedButton(
+                    child: Text('ユーティリティ登録画面へ'), onPressed: (){
+                  Navigator.push(context, MaterialPageRoute(
+                    // （2） 実際に表示するページ(ウィジェット)を指定する
+                      builder: (context) =>AddActionScreen("",h.currentAddress)
+                  ));
                 })
-
               ],
             ),
             Container(height: 30),
@@ -174,6 +208,51 @@ class Home extends StatelessWidget {
             ],
           ]),
         ),
+      ),
+    );
+  }
+
+  final List<String> imageList = ["https://images.unsplash.com/photo-1520342868574-5fa3804e551c?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=6ff92caffcdd63681a35134a6770ed3b&auto=format&fit=crop&w=1951&q=80",
+    'https://images.unsplash.com/photo-1523205771623-e0faa4d2813d?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=89719a0d55dd05e2deae4120227e6efc&auto=format&fit=crop&w=1953&q=80',
+    'https://images.unsplash.com/photo-1508704019882-f9cf40e475b4?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=8c6e5e3aba713b17aa1fe71ab4f0ae5b&auto=format&fit=crop&w=1352&q=80',
+    'https://images.unsplash.com/photo-1519985176271-adb1088fa94c?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=a0c8d632e977f94e5d312d9893258f59&auto=format&fit=crop&w=1355&q=80'];
+  Widget imageSLider(BuildContext context)  {
+    return Container(
+      margin: EdgeInsets.all(15),
+      child: CarouselSlider.builder(
+        itemCount: imageList.length,
+        options: CarouselOptions(
+          enlargeCenterPage: true,
+          height: 300,
+          autoPlay: true,
+          autoPlayInterval: Duration(seconds: 3),
+          reverse: false,
+          aspectRatio: 5.0,
+        ),
+        itemBuilder: (context, i, id){
+          //for onTap to redirect to another screen
+          return GestureDetector(
+            child: Container(
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white,)
+              ),
+              //ClipRRect for image border radius
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.network(
+                  imageList[i],
+                  width: 500,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            onTap: (){
+              var url = imageList[i];
+              print(url.toString());
+            },
+          );
+        },
       ),
     );
   }
