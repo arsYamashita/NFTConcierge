@@ -14,7 +14,6 @@ import 'package:carousel_slider/carousel_slider.dart';
 late Client httpClient;
 late Web3Client ethClient;
 final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -47,7 +46,9 @@ class HomeController extends GetxController {
   bool wcConnected = false;
 
   List<String> contractAddressList = [];
+  List<ConciergeNFT> conciergeNFTList = [];
 
+  final List<NFT> nfts = [];
   static const OPERATING_CHAIN = 137;
 
   final wc = WalletConnectProvider.polygon();
@@ -101,39 +102,13 @@ class HomeController extends GetxController {
         clear();
       });
     }
-    getCcontractAddressList();
   }
-
-  getLastestBlock() async {
-    print(await provider!.getLastestBlock());
-    print(await provider!.getLastestBlockWithTransaction());
-  }
-
-  testProvider() async {
-    final rpcProvider = JsonRpcProvider('https://bsc-dataseed.binance.org/');
-    print(rpcProvider);
-    print(await rpcProvider.getNetwork());
-  }
-
-  test() async {}
-
-  testSwitchChain() async {
-    await ethereum!.walletSwitchChain(97, () async {
-      await ethereum!.walletAddChain(
-        chainId: 97,
-        chainName: 'Binance Testnet',
-        nativeCurrency:
-        CurrencyParams(name: 'BNB', symbol: 'BNB', decimals: 18),
-        rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545/'],
-      );
-    });
-  }
-
 
   @override
   void onInit() {
-    init();
     Firebase.initializeApp(); // new
+    getCcontractAddressList();
+    init();
     super.onInit();
   }
 
@@ -142,8 +117,71 @@ class HomeController extends GetxController {
     final snapshot = await firestore
         .collection('Collections')
         .get();
-    var contractAddressList = snapshot.docs.map((doc) => doc.id).toList();
-    print(contractAddressList);
+    contractAddressList = snapshot.docs.map((doc) => doc.id).toList();
+    List<ConciergeNFT> coList = [];
+    for (var doc in snapshot.docs) {
+      if (doc.id != 'CustomCollections') {
+        var docID = doc.id;
+        ConciergeNFT coItem = ConciergeNFT();
+        coItem.address = doc.data()['address'];
+        coItem.enable = doc.data()['enable'];
+        coItem.contractAddress = doc.data()['contractAddress'];
+        List<Utill> utillList = [];
+        for (var action in  doc.data()['utilities']) {
+          Utill utill = Utill();
+          utill.action = action['action'];
+          utill.actionType = action['actionType'];
+          utill.desctiption = action['desctiption'];
+          utillList.add(utill);
+        }
+        coItem.utilities = utillList;
+        final metaResponse = await http.get(
+            Uri.parse('$endpointGetNFTMetadata?contractAddress=$docID&tokenId=0'));
+        if (metaResponse.statusCode == 200) {
+          final nft = json.decode(metaResponse.body);
+          var item = NFT();
+          print(nft);
+          item.created = nft['contractMetadata']['contractDeployer'];
+          item.contractAddress = nft['contract']['address'];
+          var tokenID = nft['id']['tokenId'];
+          item.imageURL = (nft['media'][0]['raw']).contains('ipfs://') ? nft['media'][0]['raw'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')
+              : nft['media'][0]['raw'];
+          if (nft['title'].length == 0) {
+            item.title = nft['contractMetadata']['name'];
+          } else {
+            item.title = nft['title'];
+          }
+          if (nft['description'].length == 0) {
+            item.description = nft['contractMetadata']['name'];
+          } else {
+            item.description = nft['description'];
+          }
+          coItem.nft = item;
+          nfts.add(item);
+        }
+        coList.add(coItem);
+      }
+      conciergeNFTList = coList;
+    }
+    update();
+    // for (var id in contractAddressList) {
+    //   if (id != 'CustomCollections') {
+    //     final metaResponse = await http.get(
+    //         Uri.parse('$endpointGetNFTMetadata?contractAddress=$id&tokenId=0'));
+    //     if (metaResponse.statusCode == 200) {
+    //       final nft = json.decode(metaResponse.body);
+    //       var item = NFT();
+    //       item.created = nft['contractMetadata']['contractDeployer'];
+    //       item.contractAddress = nft['contract']['address'];
+    //       var tokenID = nft['id']['tokenId'];
+    //         item.imageURL = (nft['media'][0]['raw']).contains('ipfs://') ? nft['media'][0]['raw'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')
+    //             : nft['media'][0]['raw'];
+    //         item.title = nft['title'];
+    //         item.description = nft['description'];
+    //         nfts.add(item);
+    //     }
+    //   }
+    // }
   }
 }
 
@@ -168,7 +206,7 @@ class Home extends StatelessWidget {
         body: Center(
           child: Column(children: [
             Container(height: 10),
-            imageSLider(context),
+            h.conciergeNFTList.length >0 ? imageSLider(context, h.conciergeNFTList) : Container(),
             Builder(builder: (_) {
               var shown = '';
               if (h.isConnected && !h.isInOperatingChain)
@@ -176,17 +214,17 @@ class Home extends StatelessWidget {
               return Text(shown,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20));
             }),
+            h.currentAddress.length == 0 ?
+            Text('ウォレットに未接続です') :
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                h.currentAddress.length == 0 ?
-                Text('ウォレットに未接続です') :
                 OutlinedButton(
                     child: Text('ユーティリティNFT一覧へ'), onPressed: (){
                   Navigator.push(context, MaterialPageRoute(
                     // （2） 実際に表示するページ(ウィジェット)を指定する
                       builder: (context) =>NftList(
-                        contractAddress: '0xFe82688c1191cd23aEE864C5B3579df38B70742A',
+                        conciergeNFTList: h.conciergeNFTList,
                         address: h.currentAddress,
                         page: 0,
                         limit: 20,
@@ -216,11 +254,11 @@ class Home extends StatelessWidget {
     'https://images.unsplash.com/photo-1523205771623-e0faa4d2813d?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=89719a0d55dd05e2deae4120227e6efc&auto=format&fit=crop&w=1953&q=80',
     'https://images.unsplash.com/photo-1508704019882-f9cf40e475b4?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=8c6e5e3aba713b17aa1fe71ab4f0ae5b&auto=format&fit=crop&w=1352&q=80',
     'https://images.unsplash.com/photo-1519985176271-adb1088fa94c?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=a0c8d632e977f94e5d312d9893258f59&auto=format&fit=crop&w=1355&q=80'];
-  Widget imageSLider(BuildContext context)  {
+   Widget imageSLider(BuildContext context, List<ConciergeNFT> nfts)  {
     return Container(
       margin: EdgeInsets.all(15),
       child: CarouselSlider.builder(
-        itemCount: imageList.length,
+        itemCount: nfts.length,
         options: CarouselOptions(
           enlargeCenterPage: true,
           height: 300,
@@ -241,14 +279,14 @@ class Home extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Image.network(
-                  imageList[i],
+                  nfts[i].nft.imageURL,
                   width: 500,
                   fit: BoxFit.cover,
                 ),
               ),
             ),
             onTap: (){
-              var url = imageList[i];
+              var url = nfts[i].nft.title;
               print(url.toString());
             },
           );
