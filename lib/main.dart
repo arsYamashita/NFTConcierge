@@ -164,24 +164,6 @@ class HomeController extends GetxController {
       conciergeNFTList = coList;
     }
     update();
-    // for (var id in contractAddressList) {
-    //   if (id != 'CustomCollections') {
-    //     final metaResponse = await http.get(
-    //         Uri.parse('$endpointGetNFTMetadata?contractAddress=$id&tokenId=0'));
-    //     if (metaResponse.statusCode == 200) {
-    //       final nft = json.decode(metaResponse.body);
-    //       var item = NFT();
-    //       item.created = nft['contractMetadata']['contractDeployer'];
-    //       item.contractAddress = nft['contract']['address'];
-    //       var tokenID = nft['id']['tokenId'];
-    //         item.imageURL = (nft['media'][0]['raw']).contains('ipfs://') ? nft['media'][0]['raw'].replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')
-    //             : nft['media'][0]['raw'];
-    //         item.title = nft['title'];
-    //         item.description = nft['description'];
-    //         nfts.add(item);
-    //     }
-    //   }
-    // }
   }
 }
 
@@ -207,13 +189,6 @@ class Home extends StatelessWidget {
           child: Column(children: [
             Container(height: 10),
             h.conciergeNFTList.length >0 ? imageSLider(context, h.conciergeNFTList) : Container(),
-            Builder(builder: (_) {
-              var shown = '';
-              if (h.isConnected && !h.isInOperatingChain)
-                shown = 'Wrong chain! Please connect to Porigon.';
-              return Text(shown,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20));
-            }),
             h.currentAddress.length == 0 ?
             Text('ウォレットに未接続です') :
             Column(
