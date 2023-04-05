@@ -91,17 +91,18 @@ class HomeController extends GetxController {
   }
 
   void start() {
-    if (Ethereum.isSupported) {
-      connectProvider();
-
-      ethereum!.onAccountsChanged((accs) {
-        clear();
-      });
-
-      ethereum!.onChainChanged((chain) {
-        clear();
-      });
-    }
+    connectProvider();
+    // if (Ethereum.isSupported) {
+    //   connectProvider();
+    //
+    //   ethereum!.onAccountsChanged((accs) {
+    //     clear();
+    //   });
+    //
+    //   ethereum!.onChainChanged((chain) {
+    //     clear();
+    //   });
+    // }
   }
 
   @override
