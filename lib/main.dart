@@ -98,6 +98,7 @@ class HomeController extends GetxController {
     //   ethereum!.onAccountsChanged((accs) {
     //     clear();
     //   });
+    //   });
     //
     //   ethereum!.onChainChanged((chain) {
     //     clear();
@@ -205,14 +206,20 @@ class Home extends StatelessWidget {
                         page: 0,
                         limit: 20,
                       )
-                  ));
+                  )).then((value) {
+                    // 再描画
+                    h.getCcontractAddressList();
+                  });
                 }),
                 OutlinedButton(
                     child: Text('ユーティリティ登録画面へ'), onPressed: (){
                   Navigator.push(context, MaterialPageRoute(
                     // （2） 実際に表示するページ(ウィジェット)を指定する
-                      builder: (context) =>AddActionScreen("",h.currentAddress)
-                  ));
+                      builder: (context) =>AddActionScreen(h.conciergeNFTList,h.currentAddress)
+                  )).then((value) {
+                    // 再描画
+                    h.getCcontractAddressList();
+                  });
                 })
               ],
             ),

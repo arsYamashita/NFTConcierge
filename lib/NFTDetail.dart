@@ -95,15 +95,20 @@ class _NFTDetailWidgetState extends State<NFTDetailWidget> {
                 Wrap(
                   spacing: 16,
                   children: widget.nft.utilities
-                      .map((link) => ElevatedButton(
+                      .map((link) => link.actionType == 'URL' ? ElevatedButton(
                     onPressed: () {
                       if (link.actionType == 'URL') {
                         html.window.open(link.action, '');
-                      } else if (link.actionType == 'Text') {
-                        print(link.action);
                       }
                     },
                     child: Text(link.desctiption),
+                  ) : Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: link.action, style: TextStyle(fontWeight: FontWeight.bold)),
+                        TextSpan(text: link.desctiption),
+                      ],
+                    ),
                   ))
                       .toList(),
                 )

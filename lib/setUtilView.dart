@@ -7,30 +7,10 @@ import 'package:http/http.dart' as http;
 import 'connected.dart';
 import 'dart:html' as html;
 
-final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-Future<void> addContractAction(
-    String contractAddress,
-    String actionType,
-    String action,
-    String desctiption,
-    String address,
-    ) async {
-  try {
-    await firestore
-        .collection('Collections')
-        .doc(contractAddress).set(
-        {
-          'contractAddress': contractAddress,
-          'enable': true,
-          'utilities': [{'actionType': actionType,
-            'action': action, 'desctiption': desctiption}],
-          'address': address}
-    );
-  } catch (e) {
-    print('登録失敗:$e');
-  }
+bool strComp(str1,str2) {
+  return str1.toLowerCase() == str2.toLowerCase();
 }
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
 Future<List<String>> getActionTypes() async {
   final snapshot = await firestore
@@ -48,9 +28,9 @@ Future<List<String>> getActionTypes() async {
 }
 
 class AddActionScreen extends StatefulWidget {
-  final String contractAddress;
+  final List<ConciergeNFT> conciergeNFTList;
   final String address;
-  AddActionScreen(this.contractAddress,this.address);
+  AddActionScreen(this.conciergeNFTList,this.address);
   @override
   _AddActionScreenState createState() => _AddActionScreenState();
 }
@@ -61,6 +41,8 @@ class _AddActionScreenState extends State<AddActionScreen> {
   String _action = '';
   String _description = '';
   bool _isCreater = false;
+  int utillCount = 0;
+  late ConciergeNFT selectNFT;
 
   List<String> _actionTypes = [];
   @override
@@ -73,11 +55,21 @@ class _AddActionScreenState extends State<AddActionScreen> {
     if (response.statusCode == 200) {
       final jsonBody = json.decode(response.body);
       final createrAddress = jsonBody['contractMetadata']['contractDeployer'];
+
+      print(jsonBody);
+      for (ConciergeNFT nft in widget.conciergeNFTList) {
+        if (strComp(nft.contractAddress,contractAddress) && strComp(widget.address,createrAddress)) {
+          setState(() {
+            _isCreater = strComp(widget.address,createrAddress);
+            utillCount = nft.utilities.length;
+            selectNFT = nft;
+            _contractAddress = nft.contractAddress;
+          });
+        }
+      }
       setState(() {
         _isCreater = widget.address == createrAddress;
-        print(widget.address);
-        print(createrAddress);
-        print('_isCreater:$_isCreater');
+        _contractAddress = jsonBody['address'];
       });
     } else {
       setState(() {
@@ -85,6 +77,7 @@ class _AddActionScreenState extends State<AddActionScreen> {
       });
     }
   }
+
   Future<void> _loadActionTypes() async {
     final actionTypes = await getActionTypes();
     final list = actionTypes
@@ -97,11 +90,58 @@ class _AddActionScreenState extends State<AddActionScreen> {
       _actionType = _actionTypes[0];
     });
   }
+
+  Future<void> addContractAction(
+      String contractAddress,
+      String actionType,
+      String action,
+      String desctiption,
+      String address,
+      ) async {
+    if (utillCount > 0) {
+      List<Map<String, String>> utilities = [];
+      for (Utill util in selectNFT.utilities) {
+        utilities.add({'actionType': util.actionType,
+          'action': util.action, 'desctiption': util.desctiption});
+      }
+      utilities.add({'actionType': actionType,
+        'action': action, 'desctiption': desctiption});
+      print(utilities);
+      try {
+        await firestore
+            .collection('Collections')
+            .doc(contractAddress).update(
+            {
+              'utilities': utilities,
+            }
+        );
+      } catch (e) {
+        print('登録失敗:$e');
+      }
+    } else {
+      try {
+        await firestore
+            .collection('Collections')
+            .doc(contractAddress).set(
+            {
+              'contractAddress': contractAddress,
+              'enable': true,
+              'utilities': [{'actionType': actionType,
+                'action': action, 'desctiption': desctiption}
+              ],
+              'address': address}
+        );
+      } catch (e) {
+        print('登録失敗:$e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Action'),
+        title: Text('ユーティリティ登録'),
       ),
       body: Form(
         key: _formKey,
@@ -109,23 +149,23 @@ class _AddActionScreenState extends State<AddActionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'ContractAddress',
               ),
               validator: (value) {
                 if (value!.isEmpty) {
-                  return 'Please enter an action';
+                  return '入力してください';
                 }
                 return null;
               },
               onChanged: (value) {
                 isCreater(value);
-                _contractAddress = value;
               },
             ),
+            _contractAddress.length == 0 ? Text('入力してください') :utillCount == 0 ? Text("ユーティリティは未登録です。") : Text("$utillCount件のユーティリティが登録されています。"),
             DropdownButtonFormField<String>(
               value: _actionType,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Action Type',
               ),
               validator: (value) {
@@ -148,11 +188,11 @@ class _AddActionScreenState extends State<AddActionScreen> {
             ),
             TextFormField(
               decoration: InputDecoration(
-                hintText: 'Action',
+                hintText: _actionType == 'URL' ? 'Action' : 'タイトル',
               ),
               validator: (value) {
                 if (value!.isEmpty) {
-                  return 'Actionを入力してください';
+                  return _actionType == 'URL' ? 'Actionを入力してください' : 'タイトルを入力してください';
                 }
                 return null;
               },
@@ -163,9 +203,11 @@ class _AddActionScreenState extends State<AddActionScreen> {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: '説明',
               ),
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
               validator: (value) {
                 if (value!.isEmpty) {
                   return '説明を入力してください';
@@ -193,7 +235,7 @@ class _AddActionScreenState extends State<AddActionScreen> {
                     Navigator.pop(context);
                   }
                 },
-                child: _isCreater ? Text('登録する') : Text('コントラクトアドレスが間違っています'),
+                child: _contractAddress.length == 0 ? Text('入力してください') : _isCreater ? Text('登録する') : Text('コントラクトアドレスが間違っています'),
               ),
             ),
           ],
