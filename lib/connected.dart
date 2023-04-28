@@ -17,7 +17,9 @@ const nose360Address = '0x4539984a14cfc1854765dd81e4ef9aef6b7a5734';
 const boboAddress    = '0xa0e19ad5f2cacecb010f4459f4d7b75bfb23e136';
 
 final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
+bool strComp(str1,str2) {
+  return str1.toLowerCase() == str2.toLowerCase();
+}
 Future getContractMetadata(String contractAddress) async {
   final response = await http.get(Uri.parse('$endpointGetContractMetadata?contractAddress=$contractAddress'));
   if (response.statusCode == 200) {
@@ -64,12 +66,11 @@ class NftList extends StatelessWidget {
 
     if (response.statusCode == 200) {
       final jsonBody = json.decode(response.body);
-
       final List<ConciergeNFT> nfts = [];
       for (var nft in jsonBody['ownedNfts']) {
-
         for (var conNFT in conciergeNFTList) {
-          if (conNFT.contractAddress == nft['contract']['address']) {
+          if (strComp(conNFT.contractAddress,nft['contract']['address'])) {
+            print(conNFT.contractAddress);
             nfts.add(conNFT);
           }
         }
