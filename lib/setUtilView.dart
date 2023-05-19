@@ -221,7 +221,7 @@ class _AddActionScreenState extends State<AddActionScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: ElevatedButton(
                 onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
+                  if (_formKey.currentState!.validate() && _isCreater) {
                     await addContractAction(
                         _contractAddress,
                         _actionType,

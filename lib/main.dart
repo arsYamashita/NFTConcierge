@@ -110,10 +110,38 @@ class HomeController extends GetxController {
   void onInit() {
     Firebase.initializeApp(); // new
     getCcontractAddressList();
+    //getContractTest('0xC333F84fd2FD86760e7dC5a288b7a9D4128F2Dab');
     init();
     super.onInit();
   }
 
+  void getContractTest(conAd) async {
+    final metaResponse = await http.get(
+        Uri.parse('$endpointGetNFTMetadata?contractAddress=$conAd&tokenId=43410'));
+    if (metaResponse.statusCode == 200) {
+      final nft = json.decode(metaResponse.body);
+      var item = NFT();
+      print(nft);
+      item.created = nft['contractMetadata']['contractDeployer'];
+      item.contractAddress = nft['contract']['address'];
+      var tokenID = nft['id']['tokenId'];
+      item.imageURL =
+      (nft['media'][0]['raw']).contains('ipfs://') ? nft['media'][0]['raw']
+          .replaceFirst('ipfs://', 'https://ipfs.io/ipfs/')
+          : nft['media'][0]['raw'];
+      if (nft['title'].length == 0) {
+        item.title = nft['contractMetadata']['name'];
+      } else {
+        item.title = nft['title'];
+      }
+      if (nft['description'].length == 0) {
+        item.description = nft['contractMetadata']['name'];
+      } else {
+        item.description = nft['description'];
+      }
+      print(item);
+    }
+  }
   void getCcontractAddressList() async {
     print('getCcontractAddressList');
     final snapshot = await firestore
